@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Management System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+    header {
+      background: #1f4e79;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 22px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,.08);
+    }
+    h2 { margin-bottom: 15px; }
+    form {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    input, button {
+      padding: 12px;
+      border-radius: 7px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+    button {
+      background: #1f4e79;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: .2s;
+    }
+    button:hover { transform: translateY(-2px); opacity: .9; }
+    .full { grid-column: 1 / -1; }
+    .search { width: 100%; margin-bottom: 15px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th { background: #eef3f8; }
+    .delete {
+      background: #d9534f;
+      padding: 7px 10px;
+    }
+    .edit {
+      background: #f0ad4e;
+      padding: 7px 10px;
+      margin-right: 5px;
+    }
+    .empty {
+      text-align: center;
+      padding: 20px;
+      color: #777;
+    }
+    @media (max-width: 650px) {
+      form { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+      table { font-size: 13px; }
+      th, td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Student Management System</h1>
+  <p>Java Full Stack Demo</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Add Student</h2>
+
+    <form id="studentForm">
+      <input type="text" id="name" placeholder="Student Name" required>
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="number" id="age" placeholder="Age" min="1" required>
+      <input type="text" id="course" placeholder="Course" required>
+
+      <button class="full" type="submit" id="submitBtn">
+        Add Student
+      </button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Students</h2>
+
+    <input
+      class="search"
+      type="text"
+      id="search"
+      placeholder="Search by name or course..."
+    >
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Age</th>
+          <th>Course</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody id="studentTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  let students = JSON.parse(localStorage.getItem("students")) || [];
+  let editId = null;
+
+  const form = document.getElementById("studentForm");
+  const table = document.getElementById("studentTable");
+  const search = document.getElementById("search");
+  const submitBtn = document.getElementById("submitBtn");
+
+  function saveStudents() {
+    localStorage.setItem("students", JSON.stringify(students));
+  }
+
+  function displayStudents(list = students) {
+    table.innerHTML = "";
+
+    if (list.length === 0) {
+      table.innerHTML =
+        '<tr><td colspan="6" class="empty">No students found</td></tr>';
+      return;
+    }
+
+    list.forEach(student => {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${student.id}</td>
+        <td>${escapeHTML(student.name)}</td>
+        <td>${escapeHTML(student.email)}</td>
+        <td>${student.age}</td>
+        <td>${escapeHTML(student.course)}</td>
+        <td>
+          <button class="edit" onclick="editStudent(${student.id})">Edit</button>
+          <button class="delete" onclick="deleteStudent(${student.id})">Delete</button>
+        </td>
+      `;
+
+      table.appendChild(row);
+    });
+  }
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const student = {
+      id: editId || Date.now(),
+      name: document.getElementById("name").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      age: Number(document.getElementById("age").value),
+      course: document.getElementById("course").value.trim()
+    };
+
+    if (editId) {
+      students = students.map(s => s.id === editId ? student : s);
+      editId = null;
+      submitBtn.textContent = "Add Student";
+    } else {
+      students.push(student);
+    }
+
+    saveStudents();
+    displayStudents();
+    form.reset();
+  });
+
+  function editStudent(id) {
+    const student = students.find(s => s.id === id);
+    if (!student) return;
+
+    document.getElementById("name").value = student.name;
+    document.getElementById("email").value = student.email;
+    document.getElementById("age").value = student.age;
+    document.getElementById("course").value = student.course;
+
+    editId = id;
+    submitBtn.textContent = "Update Student";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function deleteStudent(id) {
+    if (!confirm("Delete this student?")) return;
+
+    students = students.filter(s => s.id !== id);
+    saveStudents();
+    displayStudents();
+  }
+
+  search.addEventListener("input", function() {
+    const value = search.value.toLowerCase();
+
+    const filtered = students.filter(s =>
+      s.name.toLowerCase().includes(value) ||
+      s.course.toLowerCase().includes(value)
+    );
+
+    displayStudents(filtered);
+  });
+
+  function escapeHTML(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  displayStudents();
+</script>
+
+</body>
+</html>
